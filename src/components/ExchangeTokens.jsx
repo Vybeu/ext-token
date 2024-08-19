@@ -1,0 +1,217 @@
+import React, { useState } from 'react';
+import { ethers } from 'ethers';
+
+const ExchangeTokens = ({ account }) => {
+    const [exchangeAmount, setExchangeAmount] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [transactionHash, setTransactionHash] = useState('');
+
+    const simpleDexAbi = [
+        {
+            "inputs": [],
+            "name": "exchangeEtherForTokens",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenAddress",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "owner",
+                    "type": "address"
+                }
+            ],
+            "name": "OwnableInvalidOwner",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "account",
+                    "type": "address"
+                }
+            ],
+            "name": "OwnableUnauthorizedAccount",
+            "type": "error"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "previousOwner",
+                    "type": "address"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "newOwner",
+                    "type": "address"
+                }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+        },
+        {
+            "inputs": [],
+            "name": "renounceOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "newOwner",
+                    "type": "address"
+                }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "withdrawEther",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "withdrawTokens",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "stateMutability": "payable",
+            "type": "receive"
+        },
+        {
+            "inputs": [],
+            "name": "owner",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "token",
+            "outputs": [
+                {
+                    "internalType": "contract IERC20",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "TOKEN_PRICE",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ];
+
+    const simpleDexAddress = '0x64FD903d541C5224AcDa073297C3D25b6b22c5a6';
+
+    const handleExchange = async () => {
+        if (!window.ethereum) {
+            setErrorMessage('No crypto wallet found. Please install MetaMask.');
+            return;
+        }
+
+        try {
+            // Request account access if needed
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            // Create a new ethers provider and signer
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+
+            // Create a new contract instance with the signer
+            const simpleDexContract = new ethers.Contract(simpleDexAddress, simpleDexAbi, signer);
+
+            // Convert exchange amount to Wei
+            const exchangeAmountWei = ethers.parseEther(exchangeAmount);
+
+            // Call the exchangeEtherForTokens function
+            const tx = await simpleDexContract.exchangeEtherForTokens({ value: exchangeAmountWei });
+            setTransactionHash(tx.hash);
+
+            // Wait for the transaction to be confirmed
+            await tx.wait();
+
+            setErrorMessage(''); // Clear any previous error message
+        } catch (error) {
+            console.error('Failed to exchange ether for tokens:', error);
+            setErrorMessage('An error occurred during the exchange. Please try again.');
+        }
+    };
+
+    return (
+        <div className="p-4">
+            <input
+                type="text"
+                placeholder="Amount in ETH"
+                value={exchangeAmount}
+                onChange={(e) => setExchangeAmount(e.target.value)}
+                className="mr-2 p-2 border rounded"
+            />
+            <button
+                onClick={handleExchange}
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+                Exchange Ether for Tokens
+            </button>
+            {errorMessage && <p className="mt-4 text-red-500">{errorMessage}</p>}
+            {transactionHash && <p className="mt-4">Transaction Hash: <a className="underline text-blue-500 hover:text-blue-800" href={`https://sepolia.etherscan.io/tx/${transactionHash}`}>{transactionHash}</a></p>}
+        </div>
+    );
+};
+
+export default ExchangeTokens;
